@@ -1,0 +1,156 @@
+.login-page {
+  display: flex;
+  min-height: 100vh;
+}
+
+.login-left {
+  flex: 0 0 52%;
+  background: linear-gradient(135deg, #0a3a78 0%, #0a5fc4 55%, #0a7cf5 100%);
+  color: #fff;
+  padding: 32px 48px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-logo {
+  font-weight: 800;
+  font-size: 16px;
+  color: #fff;
+}
+
+.login-logo span {
+  opacity: 0.6;
+}
+
+.login-left-text {
+  margin: auto 0;
+}
+
+.login-left-text h1 {
+  font-size: 38px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.login-left-text p {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #d6e6ff;
+  max-width: 320px;
+}
+
+.login-right {
+  flex: 1;
+  background: #f4f7fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 340px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 28px rgba(11, 42, 91, 0.1);
+}
+
+.login-card h2 {
+  font-size: 18px;
+  color: #0b2a5b;
+}
+
+.login-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 4px 0 16px;
+}
+
+.login-card label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0b2a5b;
+  margin-bottom: 4px;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  outline: none;
+}
+
+.login-card input:focus {
+  border-color: #1a6cf0;
+}
+
+.login-button {
+  width: 100%;
+  padding: 10px;
+  background: #1a7cf5;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-button:hover {
+  background: #1260c4;
+}
+
+.login-demo {
+  margin-top: 16px;
+  background: #f1f6ff;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 10px;
+  color: #475569;
+}
+
+.login-demo p {
+  margin-top: 4px;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.login-footer a {
+  color: #1a6cf0;
+  font-weight: 700;
+}
+
+@media (max-width: 800px) {
+  .login-page {
+    flex-direction: column;
+  }
+
+  .login-left {
+    flex: none;
+    padding: 24px;
+  }
+
+  .login-left-text {
+    margin: 32px 0 16px;
+  }
+
+  .login-left-text h1 {
+    font-size: 28px;
+  }
+}
+.login-error {
+  font-size: 10px;
+  color: #dc2626;
+  margin: -4px 0 10px;
+}

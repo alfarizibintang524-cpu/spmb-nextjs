@@ -1,0 +1,28 @@
+.stat-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* angka biru + keterangan kecil di bawahnya */
+.stat-blue strong {
+  color: #0a7ff5;
+  font-size: 22px;
+}
+
+.stat-card small,
+.box small {
+  display: block;
+  font-size: 8px;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+.box-blue strong {
+  color: #0a7ff5;
+  font-size: 22px;
+}
+
+@media (max-width: 800px) {
+  .stat-4 {
+    grid-template-columns: 1fr 1fr;
+  }
+}

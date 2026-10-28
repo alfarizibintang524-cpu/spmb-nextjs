@@ -1,0 +1,40 @@
+import pool from "@/lib/db";
+import { requireRole } from "@/lib/session";
+import DashboardStat from "@/app/ui/DashboardStat";
+import MiniBars from "@/app/ui/MiniBars";
+import EmptyState from "@/app/ui/EmptyState";
+
+export default async function DashboardKepalaSekolahPage() {
+  const user = await requireRole("kepsek");
+  const [[stats], [recent], [majors], [selection]] = await Promise.all([
+    pool.execute(
+      `SELECT (SELECT COUNT(*) FROM users WHERE role = 'calon_siswa') AS siswa,
+        (SELECT COUNT(*) FROM tes_tpa) AS tes,
+        (SELECT COUNT(*) FROM pendaftaran WHERE status = 'diterima') AS diterima,
+        (SELECT COUNT(*) FROM pembayaran WHERE status = 'lunas') AS lunas,
+        (SELECT COALESCE(SUM(jumlah), 0) FROM pembayaran WHERE status = 'lunas') AS pemasukan`
+    ),
+    pool.execute("SELECT nama, email FROM users WHERE role = 'calon_siswa' ORDER BY created_at DESC, id DESC LIMIT 5"),
+    pool.execute(
+      `SELECT COALESCE(p.jurusan_1, 'Belum dipilih') AS label, COUNT(*) AS value
+       FROM users u LEFT JOIN pendaftaran p ON p.user_id = u.id
+       WHERE u.role = 'calon_siswa' GROUP BY p.jurusan_1 ORDER BY value DESC LIMIT 5`
+    ),
+    pool.execute("SELECT status AS label, COUNT(*) AS value FROM pendaftaran GROUP BY status ORDER BY status"),
+  ]);
+  const cards = [
+    ["Total Calon Siswa", Number(stats[0].siswa)],
+    ["Sudah Tes TPA", Number(stats[0].tes)],
+    ["Diterima", Number(stats[0].diterima)],
+    ["Pembayaran Lunas", Number(stats[0].lunas)],
+    ["Uang Masuk", Number(stats[0].pemasukan)],
+  ] as const;
+  return <><h1 className="page-title">Dashboard Kepala Sekolah</h1><p className="page-sub">Selamat datang, {user.nama}. Ringkasan sistem penerimaan murid baru.</p>
+    <div className="stat-grid">{cards.map(([label, value], index) => <DashboardStat key={label} label={label} value={value} icon={index} prefix={index === 4 ? "Rp " : undefined} />)}</div>
+    <div className="chart-grid">
+      <MiniBars title="Pendaftar per Jurusan" data={majors.map((row) => ({ label: String(row.label), value: Number(row.value) }))} />
+      <MiniBars title="Status Seleksi" data={selection.map((row) => ({ label: String(row.label), value: Number(row.value) }))} />
+    </div>
+    <div className="panel"><h3 className="panel-title">Pendaftar Terbaru</h3><table className="table"><thead><tr><th>Nama</th><th>Email</th></tr></thead>
+      <tbody>{recent.length ? recent.map((row) => <tr key={row.email}><td>{row.nama}</td><td>{row.email}</td></tr>) : <tr><td colSpan={2}><EmptyState message="Belum ada pendaftar untuk ditampilkan." action="Lihat laporan siswa" href="/login/principal/laporan-siswa" /></td></tr>}</tbody></table></div></>;
+}
