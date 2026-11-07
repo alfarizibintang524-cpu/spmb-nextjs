@@ -69,11 +69,18 @@ export function ReviewAction({
     }
   }
   function requestUpdate(status: string) {
-    if (status === "ditolak") setPending(status);
+    if (status === "ditolak") {
+      if (!note.trim()) {
+        setMessage("Catatan alasan penolakan wajib diisi.");
+        showToast("Catatan alasan penolakan wajib diisi.", "error");
+        return;
+      }
+      setPending(status);
+    }
     else void update(status);
   }
   return <div>
-    <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Catatan (opsional)" aria-label="Catatan verifikasi" />
+    <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Catatan (wajib saat menolak)" aria-label="Catatan verifikasi" />
     <button className="btn-blue" disabled={busy} onClick={() => requestUpdate(type === "dokumen" ? "valid" : "lunas")}>
       {busy && !pending ? <><span className="spinner" aria-hidden="true" /> Memproses...</> : type === "dokumen" ? "Valid" : "Lunas"}
     </button>{" "}
@@ -84,7 +91,15 @@ export function ReviewAction({
   </div>;
 }
 
-export function SelectionAction({ userId, status }: { userId: number; status: string }) {
+export function SelectionAction({
+  userId,
+  status,
+  principalMode = false,
+}: {
+  userId: number;
+  status: string;
+  principalMode?: boolean;
+}) {
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -111,16 +126,27 @@ export function SelectionAction({ userId, status }: { userId: number; status: st
     }
   }
   function requestUpdate(nextStatus: string) {
-    if (nextStatus === "ditolak" || nextStatus === "draft") setPending(nextStatus);
+    if (nextStatus === status) return;
+    if (principalMode || nextStatus === "ditolak" || nextStatus === "draft") setPending(nextStatus);
     else void update(nextStatus);
   }
   return <div>
     <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Catatan seleksi" aria-label="Catatan seleksi" />
-    {status === "diajukan" ? <><button className="btn-blue" disabled={busy} onClick={() => requestUpdate("diterima")}>Terima</button>{" "}
-      <button className="btn-blue" disabled={busy} onClick={() => requestUpdate("ditolak")}>Tolak</button></> :
-      <button className="btn-blue" disabled={busy} onClick={() => requestUpdate("draft")}>Batalkan</button>}
+    {principalMode ? status !== "draft" ? <>
+      <button className="btn-blue" disabled={busy || status === "diterima"} onClick={() => requestUpdate("diterima")}>Lulus</button>{" "}
+      <button className="btn-blue" disabled={busy || status === "ditolak"} onClick={() => requestUpdate("ditolak")}>Tidak Lulus</button>
+    </> : <small>Pendaftar belum mengajukan seleksi.</small> :
+      status === "diajukan" ? <>
+        <button className="btn-blue" disabled={busy} onClick={() => requestUpdate("diterima")}>Terima</button>{" "}
+        <button className="btn-blue" disabled={busy} onClick={() => requestUpdate("ditolak")}>Tolak</button>
+      </> : <button className="btn-blue" disabled={busy} onClick={() => requestUpdate("draft")}>Batalkan</button>}
     {busy && !pending && <span className="spinner" aria-label="Memproses" />}
     {message && <small role="status">{message}</small>}
-    {pending && <ActionConfirmation action={pending === "draft" ? "Batalkan" : "Tolak"} busy={busy} onCancel={() => setPending("")} onConfirm={() => void update(pending)} />}
+    {pending && <ActionConfirmation
+      action={pending === "draft" ? "Batalkan" : pending === "diterima" ? principalMode ? "Lulus" : "Terima" : principalMode ? "Tidak Lulus" : "Tolak"}
+      busy={busy}
+      onCancel={() => setPending("")}
+      onConfirm={() => void update(pending)}
+    />}
   </div>;
 }

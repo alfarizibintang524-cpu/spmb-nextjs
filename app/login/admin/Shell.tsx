@@ -10,8 +10,9 @@ const groups: Array<{ label: string; items: Menu[] }> = [
     label: "ADMIN",
     items: [
       { label: "Dashboard", href: "/login/admin" },
-      { label: "Data Calon Siswa", href: "/login/admin/data-siswa" },
+      { label: "Data Pendaftar", href: "/login/admin/data-pendaftar" },
       { label: "Tes TPA", href: "/login/admin/tes-tpa" },
+      { label: "Pengumuman", href: "/login/admin/pengumuman" },
       { label: "Seleksi", href: "/login/admin/seleksi" },
       { label: "Verifikasi Dokumen", href: "/login/admin/verifikasi" },
       { label: "Verifikasi Pembayaran", href: "/login/admin/pembayaran" },
@@ -23,7 +24,6 @@ const groups: Array<{ label: string; items: Menu[] }> = [
   {
     label: "LAPORAN",
     items: [
-      { label: "Data Pendaftar", href: "/login/admin/data-pendaftar" },
       { label: "Laporan Seleksi", href: "/login/admin/laporan-seleksi" },
       { label: "Laporan Pembayaran", href: "/login/admin/laporan-pembayaran" },
     ],

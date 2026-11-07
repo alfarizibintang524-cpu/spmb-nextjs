@@ -54,8 +54,9 @@ export default async function AdminPembayaranPage({
   }
 
   return <>
-    <h1 className="page-title">Verifikasi Pembayaran</h1>
-    <p className="page-sub">Periksa bukti transfer, lalu terima atau tolak dengan catatan yang sesuai.</p>
+    <div className="page-head"><div><h1 className="page-title">Verifikasi Pembayaran</h1>
+      <p className="page-sub">Periksa bukti transfer, lalu terima atau tolak dengan catatan yang sesuai.</p></div>
+      <form action="/api/laporan/pembayaran"><button className="btn-blue">Ekspor CSV</button></form></div>
     {!schema.ready && <div className="panel payment-admin-alert" role="alert">{schema.message}</div>}
     <div className="panel payment-review-panel">
       <form className="payment-review-filter" method="get">

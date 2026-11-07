@@ -6,6 +6,9 @@
 - Metode pembayaran mendukung Transfer Bank, Tunai (Cash), dan QRIS. Transfer Bank memerlukan bank, nomor rekening, dan nama pemilik; Tunai memakai petunjuk; QRIS menampilkan gambar placeholder sampai QR resmi diunggah.
 - Siswa memilih satu jurusan dari PPLG, TJKT, PM, DKV, dan PH. Pilihan tersimpan pada `jurusan_1`; data/kolom lama tidak dihapus.
 - Sidebar role tetap di kiri saat halaman di-scroll, header akun tetap di atas, dan menu dapat dibuka-tutup di ponsel.
+- Dashboard admin menampilkan jumlah pendaftar, dokumen menunggu, dan status pembayaran; data pendaftar dapat dicari, difilter, dibuka per detail, dan diekspor CSV.
+- Admin dapat mengelola soal TPA, jadwal tes, kuota jurusan, pengumuman, serta verifikasi dokumen dengan catatan. Penetapan seleksi memeriksa kuota jurusan sebelum menyimpan.
+- Dashboard kepala sekolah menampilkan grafik pendaftar harian, jurusan, status pembayaran, dan seleksi. Daftar peringkat mendukung penetapan lulus/tidak lulus satuan maupun massal; laporan dapat dicetak atau diunduh CSV.
 
 ## Urutan setup
 
@@ -15,7 +18,7 @@
 4. Jalankan `npm run migrate`.
 5. Jalankan `npm run dev`.
 
-Skrip migrasi mengulang migrasi secara idempoten. Migrasi 005 menambahkan tipe Tunai dan jurusan yang diperlukan bila belum ada; migrasi ini tidak mengubah tabel `users`, menghapus pembayaran, atau menghapus kolom lama.
+Skrip migrasi mengulang migrasi secara idempoten. Migrasi 005 menambahkan tipe Tunai dan jurusan yang diperlukan bila belum ada. Migrasi 006 membuat tabel jadwal tes TPA dan pengumuman jika belum ada. Migrasi tidak mengubah tabel `users`, menghapus pembayaran, atau menghapus kolom lama.
 
 ## Hal yang perlu diisi manual
 

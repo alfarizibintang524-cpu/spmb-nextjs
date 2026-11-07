@@ -4,6 +4,7 @@ import { apiSession, failure } from "@/lib/api-auth";
 const reports = {
   seleksi: {
     roles: ["admin", "kepsek"],
+    headers: ["nama", "email", "jurusan", "status", "catatan", "nilai"],
     sql: `SELECT u.nama, u.email, COALESCE(j.nama, p.jurusan_1) AS jurusan, p.status, p.catatan, t.nilai
           FROM pendaftaran p JOIN users u ON u.id = p.user_id
           LEFT JOIN jurusan j ON j.kode = p.jurusan_1
@@ -11,12 +12,16 @@ const reports = {
   },
   pembayaran: {
     roles: ["admin", "kepsek"],
+    headers: ["nama", "email", "tahap", "nominal", "metode_pembayaran", "status", "catatan", "created_at"],
     sql: `SELECT u.nama, u.email, pay.tahap, COALESCE(pay.nominal, pay.jumlah) AS nominal,
-                 pay.status, pay.catatan, pay.created_at
-          FROM pembayaran pay JOIN users u ON u.id = pay.user_id ORDER BY pay.created_at DESC`,
+                 metode.nama AS metode_pembayaran, pay.status, pay.catatan, pay.created_at
+          FROM pembayaran pay JOIN users u ON u.id = pay.user_id
+          LEFT JOIN metode_pembayaran metode ON metode.id = pay.metode_id
+          ORDER BY pay.created_at DESC`,
   },
   siswa: {
     roles: ["kepsek"],
+    headers: ["nama", "email", "nisn", "jurusan", "status"],
     sql: `SELECT u.nama, u.email, b.nisn, COALESCE(j.nama, p.jurusan_1) AS jurusan, p.status
           FROM users u LEFT JOIN biodata b ON b.user_id = u.id
           LEFT JOIN pendaftaran p ON p.user_id = u.id
@@ -25,9 +30,12 @@ const reports = {
   },
   pendaftar: {
     roles: ["admin"],
-    sql: `SELECT u.nama, u.email, u.created_at, COALESCE(p.status, 'draft') AS status,
-                 COALESCE(j.nama, p.jurusan_1) AS jurusan
-          FROM users u LEFT JOIN pendaftaran p ON p.user_id = u.id
+    headers: ["nomor_pendaftaran", "nama", "email", "nisn", "nomor_hp", "asal_sekolah", "jurusan", "status", "tanggal_daftar"],
+    sql: `SELECT u.id AS nomor_pendaftaran, u.nama, u.email, b.nisn, b.nomor_hp, b.asal_sekolah,
+                 COALESCE(j.nama, p.jurusan_1) AS jurusan, COALESCE(p.status, 'draft') AS status,
+                 u.created_at AS tanggal_daftar
+          FROM users u LEFT JOIN biodata b ON b.user_id = u.id
+          LEFT JOIN pendaftaran p ON p.user_id = u.id
           LEFT JOIN jurusan j ON j.kode = p.jurusan_1
           WHERE u.role = 'calon_siswa' ORDER BY u.created_at DESC`,
   },
@@ -35,7 +43,8 @@ const reports = {
 
 function csvCell(value) {
   const text = value == null ? "" : String(value);
-  return `"${text.replaceAll('"', '""')}"`;
+  const safeText = /^[\t\r\n ]*[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safeText.replaceAll('"', '""')}"`;
 }
 
 export async function GET(_request, { params }) {
@@ -46,7 +55,7 @@ export async function GET(_request, { params }) {
   if (auth.error) return auth.error;
   try {
     const [rows] = await pool.execute(report.sql);
-    const headers = rows.length ? Object.keys(rows[0]) : [];
+    const headers = report.headers;
     const csv = [headers, ...rows.map((row) => headers.map((header) => row[header]))]
       .map((row) => row.map(csvCell).join(",")).join("\r\n");
     return new Response(`\uFEFF${csv}`, {

@@ -10,6 +10,7 @@ const groups: Array<{ label: string; items: Menu[] }> = [
     label: "KEPALA SEKOLAH",
     items: [
       { label: "Dashboard", href: "/login/principal" },
+      { label: "Pendaftar & Peringkat", href: "/login/principal/pendaftar" },
       { label: "Laporan Calon Siswa", href: "/login/principal/laporan-siswa" },
       { label: "Laporan Seleksi", href: "/login/principal/laporan-seleksi" },
       { label: "Laporan Pembayaran", href: "/login/principal/laporan-pembayaran" },

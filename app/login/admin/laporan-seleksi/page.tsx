@@ -1,4 +1,5 @@
 import pool from "@/lib/db";
+import EmptyState from "@/app/ui/EmptyState";
 
 export default async function LaporanSeleksiPage() {
   const [rows] = await pool.execute(
@@ -18,5 +19,5 @@ export default async function LaporanSeleksiPage() {
       <div className="panel stat-card" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
     <div className="panel"><h3 className="panel-title">Rekap per Jurusan</h3><table className="table"><thead><tr><th>Jurusan</th><th>Peserta</th><th>Diterima</th><th>Ditolak</th><th>Menunggu</th></tr></thead>
       <tbody>{rows.length ? rows.map((row) => <tr key={row.jurusan}><td>{row.jurusan}</td><td>{row.peserta}</td><td>{row.diterima}</td><td>{row.ditolak}</td><td>{row.menunggu}</td></tr>) :
-        <tr><td colSpan={5}>Belum ada data seleksi.</td></tr>}</tbody></table></div></>;
+        <tr><td colSpan={5}><EmptyState message="Belum ada data seleksi." /></td></tr>}</tbody></table></div></>;
 }

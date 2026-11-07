@@ -31,6 +31,9 @@ export async function POST(request) {
     }
     const allowed = type === "dokumen" ? ["valid", "ditolak"] : ["lunas", "diterima", "ditolak"];
     if (!allowed.includes(status)) return Response.json({ message: "Status verifikasi tidak valid." }, { status: 400 });
+    if (status === "ditolak" && !note) {
+      return Response.json({ message: "Catatan alasan penolakan wajib diisi." }, { status: 400 });
+    }
     const table = type === "dokumen" ? "dokumen" : "pembayaran";
     if (type === "pembayaran") {
       const schema = await getPaymentSchemaStatus();
@@ -45,7 +48,7 @@ export async function POST(request) {
         return Response.json({ message: "Catatan alasan penolakan wajib diisi." }, { status: 400 });
       }
       const [result] = await pool.execute(
-        `UPDATE pembayaran SET status = ?, catatan = ?
+        `UPDATE pembayaran SET status = ?, catatan = COALESCE(?, catatan)
          WHERE id = ? AND tahap = ? AND nominal = ?
            AND status IN ('menunggu', 'menunggu_verifikasi')`,
         [status, note, id, tahap, nominal]
@@ -60,7 +63,10 @@ export async function POST(request) {
       }
       return Response.json({ message: "Verifikasi pembayaran berhasil disimpan." });
     }
-    const [result] = await pool.execute(`UPDATE ${table} SET status = ?, catatan = ? WHERE id = ?`, [status, note, id]);
+    const [result] = await pool.execute(
+      `UPDATE ${table} SET status = ?, catatan = COALESCE(?, catatan) WHERE id = ?`,
+      [status, note, id]
+    );
     if (!result.affectedRows) return Response.json({ message: "Data tidak ditemukan." }, { status: 404 });
     return Response.json({ message: "Verifikasi berhasil disimpan." });
   } catch (error) { return failure(error, "Verifikasi admin"); }

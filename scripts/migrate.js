@@ -118,6 +118,7 @@ async function main() {
     "003_seed_metode_pembayaran.sql",
     "004_tahap_biaya_dan_jurusan.sql",
     "005_metode_tunai_dan_jurusan_spmb.sql",
+    "006_jadwal_tes_pengumuman.sql",
   ];
 
   try {
@@ -204,6 +205,19 @@ async function main() {
       .filter((table) => !availableStageTables.has(table));
     if (missingStageTables.length > 0) {
       throw new Error(`Verifikasi gagal: tabel tidak ditemukan (${missingStageTables.join(", ")}).`);
+    }
+
+    const [adminTables] = await pool.execute(
+      `SELECT TABLE_NAME
+       FROM information_schema.TABLES
+       WHERE TABLE_SCHEMA = 'spmb'
+         AND TABLE_NAME IN ('jadwal_tes_tpa', 'pengumuman')`
+    );
+    const availableAdminTables = new Set(adminTables.map((table) => table.TABLE_NAME));
+    const missingAdminTables = ["jadwal_tes_tpa", "pengumuman"]
+      .filter((table) => !availableAdminTables.has(table));
+    if (missingAdminTables.length > 0) {
+      throw new Error(`Verifikasi gagal: tabel fitur admin tidak ditemukan (${missingAdminTables.join(", ")}).`);
     }
 
     const [stageColumns] = await pool.execute(

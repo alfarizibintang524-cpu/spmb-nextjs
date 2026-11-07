@@ -16,6 +16,110 @@
   margin-top: 8px;
 }
 
+.page-head,
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.report-actions {
+  justify-content: flex-start;
+}
+
+.admin-filter-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) repeat(2, minmax(130px, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-filter-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: #0b2a5b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-filter-form input,
+.admin-filter-form select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #0b2a5b;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.admin-table-wrap .table {
+  min-width: 620px;
+}
+
+.admin-cell-secondary {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.admin-pagination,
+.selection-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.admin-pagination {
+  justify-content: flex-end;
+  color: #475569;
+  font-size: 11px;
+}
+
+.selection-bulk-actions {
+  margin: 0 0 12px;
+}
+
+.payment-admin-secondary,
+.payment-admin-danger {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 11px;
+  color: #0b2a5b;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.payment-admin-danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fff7f7;
+}
+
+.payment-admin-secondary:disabled,
+.payment-admin-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .box-blue strong {
   color: #0a7ff5;
   font-size: 22px;
@@ -24,5 +128,44 @@
 @media (max-width: 800px) {
   .stat-4 {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-filter-form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-pagination {
+    justify-content: flex-start;
+  }
+}
+
+@media print {
+  body.spmb-printing .sidebar,
+  body.spmb-printing .siswa-main-header,
+  body.spmb-printing .no-print {
+    display: none !important;
+  }
+
+  body.spmb-printing .siswa-main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.spmb-printing .role-content {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  body.spmb-printing .principal-report .panel {
+    break-inside: avoid;
+    box-shadow: none;
+    border-color: #cbd5e1;
   }
 }

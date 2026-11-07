@@ -74,6 +74,7 @@ export async function POST(request) {
 export async function PATCH(request) {
   const auth = await apiSession(["admin"]);
   if (auth.error) return auth.error;
+  let connection;
   try {
     let body;
     try {
@@ -88,43 +89,68 @@ export async function PATCH(request) {
     if (!Number.isSafeInteger(id) || id <= 0) {
       return Response.json({ message: "ID jurusan tidak valid." }, { status: 400 });
     }
-    const [existingRows] = await pool.execute(
-      "SELECT id, aktif, kode FROM jurusan WHERE id = ?",
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    const [existingRows] = await connection.execute(
+      "SELECT id, aktif, kode FROM jurusan WHERE id = ? FOR UPDATE",
       [id]
     );
     const existing = existingRows[0];
-    if (!existing) return Response.json({ message: "Jurusan tidak ditemukan." }, { status: 404 });
+    if (!existing) {
+      await connection.rollback();
+      return Response.json({ message: "Jurusan tidak ditemukan." }, { status: 404 });
+    }
 
     if (Object.keys(body).length === 2 && Object.hasOwn(body, "aktif")) {
       if (body.aktif !== 0 && body.aktif !== 1 && body.aktif !== false && body.aktif !== true) {
+        await connection.rollback();
         return Response.json({ message: "Status aktif jurusan tidak valid." }, { status: 400 });
       }
       const aktif = body.aktif === 1 || body.aktif === true ? 1 : 0;
-      await pool.execute("UPDATE jurusan SET aktif = ? WHERE id = ?", [aktif, id]);
+      await connection.execute("UPDATE jurusan SET aktif = ? WHERE id = ?", [aktif, id]);
     } else {
       const result = readMajor(body);
-      if (result.error) return Response.json({ message: result.error }, { status: 400 });
+      if (result.error) {
+        await connection.rollback();
+        return Response.json({ message: result.error }, { status: 400 });
+      }
       if (result.major.kode !== existing.kode) {
+        await connection.rollback();
         return Response.json({ message: "Kode jurusan tidak dapat diubah agar data pendaftar lama tetap terhubung." }, { status: 400 });
       }
-      await pool.execute(
+      const [acceptedRows] = await connection.execute(
+        "SELECT COUNT(*) AS terisi FROM pendaftaran WHERE jurusan_1 = ? AND status = 'diterima'",
+        [existing.kode]
+      );
+      const accepted = Number(acceptedRows[0]?.terisi || 0);
+      if (result.major.kuota !== null && result.major.kuota < accepted) {
+        await connection.rollback();
+        return Response.json({
+          message: `Kuota tidak dapat di bawah jumlah siswa yang sudah lulus (${accepted}).`,
+        }, { status: 409 });
+      }
+      await connection.execute(
         `UPDATE jurusan SET nama = ?, keterangan = ?, kuota = ?, aktif = ?, urutan = ?
          WHERE id = ?`,
         [result.major.nama, result.major.keterangan, result.major.kuota,
           result.major.aktif, result.major.urutan, id]
       );
     }
-    const [rows] = await pool.execute(
+    const [rows] = await connection.execute(
       `SELECT j.id, j.kode, j.nama, j.keterangan, j.kuota, j.aktif, j.urutan,
               (SELECT COUNT(*) FROM pendaftaran p WHERE p.jurusan_1 = j.kode) AS terisi
        FROM jurusan j WHERE j.id = ?`,
       [id]
     );
+    await connection.commit();
     return Response.json({ message: "Jurusan berhasil diperbarui.", jurusan: rows[0] });
   } catch (error) {
+    if (connection) await connection.rollback();
     if (error?.code === "ER_DUP_ENTRY") {
       return Response.json({ message: "Kode jurusan sudah digunakan." }, { status: 409 });
     }
     return failure(error, "Jurusan admin PATCH");
+  } finally {
+    connection?.release();
   }
 }

@@ -1,4 +1,5 @@
 import pool from "@/lib/db";
+import EmptyState from "@/app/ui/EmptyState";
 
 export default async function LaporanPembayaranPage() {
   const [[summary], [items]] = await Promise.all([
@@ -18,5 +19,5 @@ export default async function LaporanPembayaranPage() {
       <tbody>{items.length ? items.map((row) => <tr key={row.id}><td>SPMB-{String(row.id).padStart(5, "0")}</td><td>{row.nama}</td><td>{row.email}</td>
         <td>{row.tahap === "daftar_ulang" ? "Daftar Ulang" : "Pendaftaran"}</td><td>Rp {Number(row.nominal).toLocaleString("id-ID")}</td>
         <td>{row.status}</td><td>{new Date(row.updated_at).toLocaleDateString("id-ID")}</td></tr>) :
-        <tr><td colSpan={7}>Belum ada pembayaran.</td></tr>}</tbody></table></div></>;
+        <tr><td colSpan={7}><EmptyState message="Belum ada pembayaran." /></td></tr>}</tbody></table></div></>;
 }
