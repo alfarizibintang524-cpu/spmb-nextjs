@@ -19,8 +19,271 @@
   cursor: pointer;
 }
 
+.payment-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.payment-admin-form h2,
+.payment-admin-list h2 {
+  color: #0b2a5b;
+  font-size: 15px;
+  margin: 0 0 16px;
+}
+
+.payment-admin-form label,
+.payment-review-filter label,
+.payment-review-actions label {
+  display: block;
+  color: #0b2a5b;
+  font-size: 10px;
+  font-weight: 700;
+  margin: 0 0 5px;
+}
+
+.payment-admin-form input,
+.payment-admin-form select,
+.payment-admin-form textarea,
+.payment-review-filter select,
+.payment-review-actions textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  margin: 0 0 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #0b2a5b;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+}
+
+.payment-admin-form textarea,
+.payment-review-actions textarea {
+  resize: vertical;
+}
+
+.payment-admin-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.payment-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-admin-secondary,
+.payment-admin-danger {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 11px;
+  color: #0b2a5b;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payment-admin-danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fff7f7;
+}
+
+.payment-admin-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.payment-admin-method-list {
+  display: grid;
+  gap: 10px;
+}
+
+.payment-admin-method {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e6ecf5;
+  border-radius: 8px;
+}
+
+.payment-admin-method-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.payment-admin-method h3 {
+  display: inline-block;
+  margin: 0 8px 6px 0;
+  color: #0b2a5b;
+  font-size: 12px;
+}
+
+.payment-admin-status,
+.payment-admin-type,
+.payment-admin-order {
+  display: inline-block;
+  margin: 0 6px 6px 0;
+  color: #64748b;
+  font-size: 9px;
+}
+
+.payment-admin-status.active {
+  color: #15803d;
+}
+
+.payment-admin-method > p,
+.payment-admin-current-qr,
+.payment-admin-instructions {
+  color: #475569;
+  font-size: 10px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.payment-admin-qr {
+  width: 120px;
+  height: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.payment-admin-empty,
+.payment-admin-alert,
+.payment-admin-error,
+.payment-admin-message {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.payment-admin-empty,
+.payment-admin-message {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.payment-admin-alert,
+.payment-admin-error {
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.payment-admin-error {
+  display: block;
+}
+
+.payment-review-panel {
+  min-width: 0;
+}
+
+.payment-review-filter {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.payment-review-filter label {
+  margin-bottom: 15px;
+}
+
+.payment-review-filter select {
+  width: min(100%, 260px);
+  margin-bottom: 0;
+}
+
+.payment-review-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.payment-review-table {
+  min-width: 1080px;
+}
+
+.payment-review-table td {
+  vertical-align: top;
+}
+
+.payment-review-table td small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.payment-review-actions {
+  min-width: 190px;
+}
+
+.payment-review-actions textarea {
+  min-height: 52px;
+  font-family: inherit;
+}
+
+.payment-review-actions .payment-admin-actions {
+  gap: 6px;
+}
+
+.payment-review-note,
+.payment-review-confirm p {
+  max-width: 250px;
+  margin: 0 0 8px;
+  color: #475569;
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.payment-review-confirm {
+  padding: 8px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fff7f7;
+}
+
+.payment-review-no-proof,
+.payment-review-locked {
+  color: #64748b;
+  font-size: 10px;
+}
+
 @media (max-width: 800px) {
   .stat-4 {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .payment-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .payment-review-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .payment-review-filter label {
+    margin-bottom: -5px;
+  }
+
+  .payment-review-filter select {
+    width: 100%;
+  }
+
+  .payment-admin-form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
   }
 }

@@ -11,15 +11,16 @@ export default async function DashboardAdminPage() {
     pool.execute(
       `SELECT (SELECT COUNT(*) FROM users WHERE role = 'calon_siswa') AS pendaftar,
         (SELECT COUNT(*) FROM dokumen WHERE status = 'menunggu') AS dokumen_menunggu,
-        (SELECT COUNT(*) FROM pembayaran WHERE status = 'menunggu') AS pembayaran_menunggu,
+        (SELECT COUNT(*) FROM pembayaran WHERE status IN ('menunggu', 'menunggu_verifikasi')) AS pembayaran_menunggu,
         (SELECT COUNT(*) FROM pendaftaran WHERE status = 'diterima') AS diterima,
         (SELECT COUNT(*) FROM pendaftaran WHERE status = 'ditolak') AS ditolak`
     ),
     pool.execute("SELECT id, nama, email, created_at FROM users WHERE role = 'calon_siswa' ORDER BY created_at DESC, id DESC LIMIT 5"),
     pool.execute(
-      `SELECT COALESCE(p.jurusan_1, 'Belum dipilih') AS label, COUNT(*) AS value
+      `SELECT COALESCE(j.nama, p.jurusan_1, 'Belum dipilih') AS label, COUNT(*) AS value
        FROM users u LEFT JOIN pendaftaran p ON p.user_id = u.id
-       WHERE u.role = 'calon_siswa' GROUP BY p.jurusan_1 ORDER BY value DESC LIMIT 5`
+       LEFT JOIN jurusan j ON j.kode = p.jurusan_1
+       WHERE u.role = 'calon_siswa' GROUP BY p.jurusan_1, j.nama ORDER BY value DESC LIMIT 5`
     ),
     pool.execute("SELECT status AS label, COUNT(*) AS value FROM pendaftaran GROUP BY status ORDER BY status"),
   ]);

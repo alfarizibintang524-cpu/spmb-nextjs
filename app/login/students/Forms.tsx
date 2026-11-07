@@ -139,35 +139,283 @@ export function TpaForm({ questions, result }: { questions: Question[]; result: 
   </fieldset>)}{message && <p className="page-sub">{message}</p>}<button className="btn-blue" disabled={submitting}>{submitting ? <><span className="spinner" aria-hidden="true" /> Mengirim...</> : "Kirim Jawaban"}</button></form>;
 }
 
-export function PaymentForm({ initialData }: { initialData: { jumlah: number; status: string; bukti_path: string | null; catatan: string | null } }) {
-  const [data, setData] = useState(initialData); const [message, setMessage] = useState("");
+type PaymentMethod = {
+  id: number;
+  nama: string;
+  tipe: "transfer_bank" | "qris" | "tunai" | "ewallet";
+  nama_bank: string | null;
+  nomor_rekening: string | null;
+  atas_nama: string | null;
+  qr_image: string | null;
+  petunjuk: string | null;
+  aktif: number;
+};
+
+export type PaymentStage = "pendaftaran" | "daftar_ulang";
+export type PaymentComponent = {
+  id: number;
+  tahap: PaymentStage;
+  nama: string;
+  nominal: number;
+  keterangan: string | null;
+  wajib: number;
+  aktif: number;
+  urutan: number;
+};
+export type PaymentDeadline = { tahap: PaymentStage; batas_waktu: string | null };
+
+export type PaymentData = {
+  id: number | null;
+  jumlah: number;
+  nominal: number;
+  tahap: PaymentStage;
+  status: string;
+  bukti_path: string | null;
+  catatan: string | null;
+  metode_id: number | null;
+  metode_nama: string | null;
+  metode_tipe: string | null;
+  nama_bank: string | null;
+  nomor_rekening: string | null;
+  atas_nama: string | null;
+  qr_image: string | null;
+  petunjuk: string | null;
+  created_at: string | null;
+};
+
+const maximumPaymentFileSize = 2 * 1024 * 1024;
+const allowedPaymentTypes = new Set(["application/pdf", "image/jpeg", "image/png"]);
+const stageLabels: Record<PaymentStage, string> = {
+  pendaftaran: "Pendaftaran",
+  daftar_ulang: "Daftar Ulang",
+};
+
+function isMethodReady(method: PaymentMethod | undefined) {
+  if (!method || method.aktif !== 1) return false;
+  if (method.tipe === "transfer_bank") {
+    return Boolean(method.nama_bank && method.nomor_rekening && method.atas_nama);
+  }
+  return method.tipe === "qris" || method.tipe === "tunai";
+}
+
+function stageStatus(status: string | undefined) {
+  if (status === "lunas" || status === "diterima") return "Lunas";
+  if (status === "ditolak") return "Ditolak";
+  if (status === "menunggu" || status === "menunggu_verifikasi") return "Menunggu Verifikasi";
+  return "Belum dibayar";
+}
+
+function rupiah(amount: number) {
+  return `Rp${amount.toLocaleString("id-ID")}`;
+}
+
+function formatDeadline(value: string | null | undefined) {
+  if (!value) return "Belum ditentukan; hubungi panitia.";
+  return new Date(`${value}T00:00:00`).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function PaymentForm({
+  initialData,
+  payments: initialPayments,
+  components,
+  deadlines,
+  methods: initialMethods,
+  accepted,
+  setupMessage,
+}: {
+  initialData: PaymentData;
+  payments: PaymentData[];
+  components: PaymentComponent[];
+  deadlines: PaymentDeadline[];
+  methods: PaymentMethod[];
+  accepted: boolean;
+  setupMessage: string | null;
+}) {
+  const [payments, setPayments] = useState(initialPayments);
+  const [stage, setStage] = useState<PaymentStage>("pendaftaran");
+  const [methods, setMethods] = useState(initialMethods);
+  const activeMethods = methods.filter((method) => method.aktif === 1 && method.tipe !== "ewallet");
+  const [selectedMethodId, setSelectedMethodId] = useState(
+    initialData.metode_id ? String(initialData.metode_id) : ""
+  );
+  const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const data = payments.find((payment) => payment.tahap === stage)
+    || (stage === "pendaftaran" ? initialData : { ...initialData, tahap: stage, id: null, jumlah: 0, nominal: 0, status: "belum", bukti_path: null, catatan: null, metode_id: null, metode_nama: null, metode_tipe: null, nama_bank: null, nomor_rekening: null, atas_nama: null, qr_image: null, petunjuk: null, created_at: null });
+  const selectedMethod = methods.find((method) => String(method.id) === selectedMethodId);
+  const canUpload = !["menunggu_verifikasi", "lunas", "diterima"].includes(data.status)
+    && (data.status !== "menunggu" || !data.bukti_path);
+  const stageComponents = components.filter((component) => component.tahap === stage);
+  const requiredTotal = stageComponents.filter((component) => component.wajib === 1)
+    .reduce((sum, component) => sum + Number(component.nominal), 0);
+  const locked = stage === "daftar_ulang" && !accepted;
+  const deadlineByStage = (paymentStage: PaymentStage) => deadlines.find((item) => item.tahap === paymentStage)?.batas_waktu || null;
+
+  function chooseStage(nextStage: PaymentStage) {
+    setStage(nextStage);
+    const nextPayment = payments.find((payment) => payment.tahap === nextStage);
+    setSelectedMethodId(nextPayment?.metode_id ? String(nextPayment.metode_id) : "");
+    setMessage("");
+  }
+
+  async function copyAccountNumber() {
+    if (!selectedMethod?.nomor_rekening) return;
+    try {
+      await navigator.clipboard.writeText(selectedMethod.nomor_rekening);
+      setMessage("Nomor tujuan berhasil disalin.");
+    } catch {
+      const text = "Nomor tujuan tidak dapat disalin. Silakan salin secara manual.";
+      setMessage(text);
+      showToast(text, "error");
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = event.currentTarget; const file = (form.elements.namedItem("file") as HTMLInputElement).files?.[0];
-    if (!file) return;
-    const body = new FormData(); body.set("file", file);
+    event.preventDefault();
+    const form = event.currentTarget;
+    const file = (form.elements.namedItem("file") as HTMLInputElement).files?.[0];
+    if (!file || !allowedPaymentTypes.has(file.type) || file.size === 0 || file.size > maximumPaymentFileSize) {
+      setMessage("Pilih bukti PDF/JPG/PNG dengan ukuran maksimal 2 MB.");
+      return;
+    }
+    if (!selectedMethodId || !isMethodReady(selectedMethod)) {
+      setMessage("Pilih metode dengan detail tujuan pembayaran yang tersedia.");
+      return;
+    }
+    const body = new FormData();
+    body.set("file", file);
+    body.set("metode_id", selectedMethodId);
+    body.set("tahap", stage);
     setUploading(true);
+    setMessage("");
     try {
       const response = await fetch("/api/pembayaran", { method: "POST", body });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Gagal mengirim bukti pembayaran.");
       setMessage(result.message);
-      const latest = await fetch("/api/pembayaran");
-      if (!latest.ok) throw new Error("Bukti terkirim, tetapi status gagal diperbarui.");
-      setData(await latest.json()); form.reset(); showToast("Bukti pembayaran terunggah");
+      setPayments(result.riwayat);
+      setMethods(result.metode_pembayaran);
+      setSelectedMethodId(String(result.pembayaran.metode_id || ""));
+      form.reset();
+      showToast("Bukti pembayaran terunggah");
     } catch (error) {
       const text = error instanceof Error ? error.message : "Gagal mengunggah bukti pembayaran.";
       setMessage(text); showToast(text, "error");
     } finally { setUploading(false); }
   }
-  return <div className="panel panel-pad"><div className="box-grid">
-    <div className="box"><span>Biaya Pendaftaran</span><strong>Rp {data.jumlah.toLocaleString("id-ID")}</strong></div>
-    <div className="box"><span>Status</span><StatusBadge value={data.status} /></div>
-    <div className="box"><span>Catatan Admin</span><strong>{data.catatan || "-"}</strong></div>
-  </div>{data.bukti_path && <p><a href={data.bukti_path} target="_blank" rel="noreferrer">Lihat bukti pembayaran</a></p>}
-    {data.status !== "lunas" && <form onSubmit={submit}><label htmlFor="payment-file">Bukti pembayaran (PDF/JPG/PNG, maks. 2 MB)</label>
-      <input id="payment-file" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required />
-      <button className="btn-blue" disabled={uploading}>{uploading ? <><span className="spinner" aria-hidden="true" /> Mengunggah...</> : "Kirim Bukti Pembayaran"}</button></form>}{message && <p className="page-sub">{message}</p>}</div>;
+  const activeMethodSelected = selectedMethod?.aktif === 1 && selectedMethod.tipe !== "ewallet";
+
+  return <div className="panel panel-pad payment-panel">
+    {setupMessage && <p className="payment-notice" role="alert">{setupMessage}</p>}
+    <div className="payment-stage-grid">
+      {(["pendaftaran", "daftar_ulang"] as const).map((paymentStage) => {
+        const stagePayment = payments.find((payment) => payment.tahap === paymentStage);
+        const items = components.filter((component) => component.tahap === paymentStage);
+        const subtotal = items.reduce((sum, component) => sum + Number(component.nominal), 0);
+        const total = items.filter((component) => component.wajib === 1)
+          .reduce((sum, component) => sum + Number(component.nominal), 0);
+        const isLocked = paymentStage === "daftar_ulang" && !accepted;
+        return <article className={`payment-stage-card${isLocked ? " is-locked" : ""}`} key={paymentStage}>
+          <div className="payment-stage-heading">
+            <h2>{stageLabels[paymentStage]}</h2>
+            <StatusBadge value={isLocked ? "Terkunci" : stageStatus(stagePayment?.status)} />
+          </div>
+          {paymentStage === "pendaftaran" && <p className="payment-stage-active">Tahap aktif saat ini</p>}
+          {items.length === 0 ? <p className="payment-notice">Belum ada komponen biaya aktif pada tahap ini.</p> :
+            <ul className="payment-cost-list">{items.map((item) => <li key={item.id}>
+              <span>{item.nama}{item.wajib ? "" : " (opsional)"}</span><strong>{rupiah(Number(item.nominal))}</strong>
+            </li>)}</ul>}
+          <p className="payment-stage-deadline"><strong>Batas waktu:</strong> {formatDeadline(deadlineByStage(paymentStage))}</p>
+          <div className="payment-stage-total"><span>Subtotal seluruh komponen</span><strong>{rupiah(subtotal)}</strong></div>
+          <div className="payment-stage-total"><span>Total yang harus dibayar</span><strong>{rupiah(total)}</strong></div>
+          {subtotal !== total && <p className="payment-history">Komponen opsional tidak termasuk total wajib.</p>}
+          {isLocked ? <p className="payment-lock-note">Terkunci sampai status seleksi menyatakan kamu lulus.</p> :
+            <button type="button" className={stage === paymentStage ? "payment-stage-select active" : "payment-stage-select"} onClick={() => chooseStage(paymentStage)} disabled={uploading}>
+              {stage === paymentStage ? "Tahap dipilih" : "Pilih tahap ini"}
+            </button>}
+        </article>;
+      })}
+    </div>
+    <section className="payment-current-stage">
+      <div className="payment-stage-heading">
+        <h2>Pembayaran Tahap {stageLabels[stage]}</h2>
+        <StatusBadge value={locked ? "Terkunci" : stageStatus(data.status)} />
+      </div>
+      {data.catatan && <p className="payment-notice"><strong>Catatan admin:</strong> {data.catatan}</p>}
+      {data.bukti_path && <p><a href={data.bukti_path} target="_blank" rel="noreferrer">Lihat bukti pembayaran</a></p>}
+      {data.metode_nama && <p className="payment-history">Metode sebelumnya: <strong>{data.metode_nama}</strong></p>}
+    </section>
+    <section className="payment-method">
+      <h2>Metode Pembayaran</h2>
+      {activeMethods.length === 0 && !selectedMethod ? (
+        <p className="payment-notice" role="status">
+          Belum ada metode pembayaran yang tersedia. Hubungi panitia untuk melengkapi metode pembayaran.
+        </p>
+      ) : <>
+        {activeMethods.length === 0 && <p className="payment-notice" role="status">Tidak ada metode aktif untuk pembayaran atau unggah ulang saat ini.</p>}
+        <label htmlFor="payment-method">Pilih metode</label>
+        <select id="payment-method" value={selectedMethodId} onChange={(event) => setSelectedMethodId(event.target.value)} disabled={uploading}>
+          <option value="">Pilih metode pembayaran</option>
+          {selectedMethod && !activeMethodSelected && <option value={selectedMethodId} disabled>{selectedMethod.nama} (tidak aktif)</option>}
+          {activeMethods.map((method) => <option key={method.id} value={method.id}>{method.nama}</option>)}
+        </select>
+        {!selectedMethod && activeMethods.length > 0 && <p className="payment-notice" role="status">Pilih salah satu metode sebelum mengirim bukti pembayaran.</p>}
+        {selectedMethod && <div className="payment-details">
+          <div>
+            {selectedMethod.nama_bank && <p><span>Bank</span><strong>{selectedMethod.nama_bank}</strong></p>}
+            {selectedMethod.nomor_rekening && <div className="payment-number">
+              <p><span>Nomor rekening</span><strong>{selectedMethod.nomor_rekening}</strong></p>
+              <button type="button" className="btn-copy" onClick={copyAccountNumber}>Salin nomor</button>
+            </div>}
+            {selectedMethod.atas_nama && <p><span>Atas nama</span><strong>{selectedMethod.atas_nama}</strong></p>}
+            {(selectedMethod.petunjuk || selectedMethod.tipe === "tunai") && <p><span>Petunjuk</span><strong>{selectedMethod.petunjuk || "Lakukan pembayaran tunai kepada panitia dan minta bukti pembayaran."}</strong></p>}
+          </div>
+          {selectedMethod.tipe === "qris" && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="payment-qr" src={selectedMethod.qr_image || "/qris-contoh.png"} width={180} height={180} alt={selectedMethod.qr_image ? "Kode QRIS pembayaran" : "QRIS contoh, ganti dengan QRIS resmi sekolah"} />
+          )}
+          {!isMethodReady(selectedMethod) && <p className="payment-notice" role="status">
+            Detail tujuan metode ini belum tersedia. Pembayaran dengan metode ini belum dapat dilakukan.
+          </p>}
+        </div>}
+      </>}
+    </section>
+    {locked && <p className="payment-notice" role="status">Tahap daftar ulang terkunci sampai kamu dinyatakan lulus seleksi.</p>}
+    {!locked && requiredTotal <= 0 && <p className="payment-notice" role="status">Belum ada total biaya wajib untuk tahap ini. Hubungi panitia.</p>}
+    {canUpload && !locked && requiredTotal > 0 && !setupMessage && <form className="payment-form" onSubmit={submit}>
+      <h2>Kirim Bukti Pembayaran</h2>
+      <input type="hidden" name="tahap" value={stage} />
+      <p>Total yang harus dibayar: <strong>{rupiah(requiredTotal)}</strong></p>
+      <label htmlFor="payment-file">Bukti pembayaran (PDF/JPG/PNG, maks. 2 MB)</label>
+      <input id="payment-file" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required disabled={uploading || activeMethods.length === 0 || !isMethodReady(selectedMethod) || !activeMethodSelected} />
+      <button className="btn-blue" disabled={uploading || activeMethods.length === 0 || !isMethodReady(selectedMethod) || !activeMethodSelected}>
+        {uploading ? <><span className="spinner" aria-hidden="true" /> Mengunggah...</> : "Kirim Bukti Pembayaran"}
+      </button>
+    </form>}
+    {!setupMessage && !locked && data.status === "ditolak" && <p className="payment-notice" role="status">
+      Pembayaran ditolak. Periksa catatan admin, lalu unggah ulang bukti setelah detail metode tersedia.
+    </p>}
+    {!setupMessage && !locked && !canUpload && data.status !== "ditolak" && <p className="payment-notice" role="status">
+      Bukti pembayaran sedang diverifikasi atau pembayaran tahap ini sudah lunas.
+    </p>}
+    {message && <p className="payment-message" role="status">{message}</p>}
+    <section className="payment-history-section">
+      <h2>Riwayat Pembayaran</h2>
+      {payments.length === 0 ? <p className="payment-notice" role="status">Belum ada riwayat pembayaran.</p> :
+        <div className="payment-review-table-wrap"><table className="table payment-history-table">
+          <thead><tr><th>Tahap</th><th>Nominal</th><th>Status</th></tr></thead>
+          <tbody>{payments.map((payment) => <tr key={payment.id}>
+            <td>{stageLabels[payment.tahap]}</td>
+            <td>{rupiah(Number(payment.nominal || payment.jumlah || 0))}</td>
+            <td><StatusBadge value={stageStatus(payment.status)} /></td>
+          </tr>)}</tbody>
+        </table></div>}
+    </section>
+  </div>;
 }
 
 export function ApplyButton({ eligible, status }: { eligible: boolean; status: string }) {
@@ -188,34 +436,52 @@ export function ApplyButton({ eligible, status }: { eligible: boolean; status: s
   return <><button className="btn-blue" disabled={!eligible || status === "diajukan" || submitting} onClick={apply}>{submitting ? <><span className="spinner" aria-hidden="true" /> Memproses...</> : status === "diajukan" ? "Pendaftaran Diajukan" : "Ajukan Pendaftaran"}</button>{message && <p className="page-sub" role="status">{message}</p>}</>;
 }
 
-const majors = [
-  ["PPLG", "Pengembangan Perangkat Lunak dan Gim."],
-  ["TJKT", "Teknik Jaringan Komputer dan Telekomunikasi."],
-  ["PM", "Pemasaran."], ["DKV", "Desain Komunikasi Visual."], ["PH", "Perhotelan."],
-];
-export function JurusanForm({ initialData }: { initialData: { jurusan_1: string; jurusan_2: string } }) {
-  const [first, setFirst] = useState(initialData.jurusan_1 || "");
-  const [second, setSecond] = useState(initialData.jurusan_2 || "");
+type MajorOption = {
+  kode: string;
+  nama: string;
+  keterangan: string | null;
+  kuota: number | null;
+  aktif: number;
+  terisi: number;
+};
+
+export function JurusanForm({ initialChoice, majors }: { initialChoice: string; majors: MajorOption[] }) {
+  const [choice, setChoice] = useState(initialChoice);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setMessage("");
+    if (!choice) {
+      setMessage("Pilih satu jurusan sebelum menyimpan.");
+      return;
+    }
     setSaving(true);
     try {
-      const response = await fetch("/api/jurusan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jurusan_1: first, jurusan_2: second }) });
+      const response = await fetch("/api/jurusan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kode: choice }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Gagal menyimpan pilihan.");
-      setMessage(data.message || "Pilihan jurusan tersimpan."); showToast("Pilihan jurusan tersimpan");
+      setMessage(data.message || "Jurusan yang dipilih berhasil disimpan."); showToast("Jurusan yang dipilih berhasil disimpan");
     } catch (error) {
       const text = error instanceof Error ? error.message : "Gagal menyimpan pilihan.";
       setMessage(text); showToast(text, "error");
     } finally { setSaving(false); }
   }
-  return <form className="panel" onSubmit={submit}>
-    <div className="form-grid"><div><label htmlFor="jurusan_1">Pilihan Jurusan 1</label><select id="jurusan_1" value={first} onChange={(event) => setFirst(event.target.value)} required>
-      <option value="">Pilih jurusan</option>{majors.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}</select></div>
-    <div><label htmlFor="jurusan_2">Pilihan Jurusan 2</label><select id="jurusan_2" value={second} onChange={(event) => setSecond(event.target.value)} required>
-      <option value="">Pilih jurusan</option>{majors.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}</select></div></div>
-    {message && <p className="page-sub" role="status">{message}</p>}<button className="btn-blue" disabled={saving}>{saving ? <><span className="spinner" aria-hidden="true" /> Menyimpan...</> : "Simpan Pilihan"}</button>
+  return <form className="panel major-form" onSubmit={submit}>
+    <label htmlFor="jurusan-dipilih">Jurusan yang dipilih</label>
+    <select id="jurusan-dipilih" className="major-select" value={choice} onChange={(event) => setChoice(event.target.value)} required disabled={saving || majors.length === 0}>
+      <option value="">Pilih jurusan</option>
+      {majors.map((major) => <option key={major.kode} value={major.kode} disabled={!major.aktif || (major.kuota !== null && major.terisi >= major.kuota && major.kode !== initialChoice)}>
+        {major.nama} ({major.kode}){major.kuota !== null ? ` — Kuota ${major.terisi}/${major.kuota}` : ""}
+        {major.keterangan ? ` — ${major.keterangan}` : ""}
+      </option>)}
+    </select>
+    {choice && majors.find((major) => major.kode === choice)?.keterangan && (
+      <p className="major-description">{majors.find((major) => major.kode === choice)?.keterangan}</p>
+    )}
+    {message && <p className="page-sub" role="status">{message}</p>}
+    <button className="btn-blue major-save" disabled={saving || majors.length === 0}>
+      {saving ? <><span className="spinner" aria-hidden="true" /> Menyimpan...</> : "Simpan Pilihan"}
+    </button>
   </form>;
 }

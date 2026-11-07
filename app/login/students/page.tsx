@@ -15,22 +15,23 @@ export default async function DashboardSiswaPage() {
   const user = await requireRole("calon_siswa");
   const [rows] = await pool.execute(
     `SELECT b.nisn, b.tempat_lahir, b.tanggal_lahir, b.nomor_hp, b.alamat, b.asal_sekolah, b.nama_ortu,
-            p.jurusan_1, p.jurusan_2, p.status, p.catatan,
+            p.jurusan_1, COALESCE(j.nama, p.jurusan_1) AS jurusan_nama, p.status, p.catatan,
             (SELECT COUNT(*) FROM dokumen d WHERE d.user_id = u.id) AS dokumen_count,
             (SELECT COUNT(*) FROM tes_tpa t WHERE t.user_id = u.id) AS tes_count,
-            pay.status AS payment_status
+            (SELECT pay.status FROM pembayaran pay WHERE pay.user_id = u.id AND pay.tahap = 'pendaftaran'
+             ORDER BY pay.created_at DESC, pay.id DESC LIMIT 1) AS payment_status
      FROM users u LEFT JOIN biodata b ON b.user_id = u.id
-     LEFT JOIN pendaftaran p ON p.user_id = u.id LEFT JOIN pembayaran pay ON pay.user_id = u.id
+     LEFT JOIN pendaftaran p ON p.user_id = u.id LEFT JOIN jurusan j ON j.kode = p.jurusan_1
      WHERE u.id = ?`, [Number(user.id)]
   );
   const data = rows[0] || {};
   const biodata = Boolean(data.nisn && data.tempat_lahir && data.tanggal_lahir && data.nomor_hp && data.alamat && data.asal_sekolah && data.nama_ortu);
   const steps = [
     { label: "Biodata", done: biodata, value: biodata ? "Lengkap" : "Belum lengkap" },
-    { label: "Jurusan", done: Boolean(data.jurusan_1 && data.jurusan_2), value: data.jurusan_1 ? `${data.jurusan_1} / ${data.jurusan_2}` : "Belum dipilih" },
+    { label: "Jurusan", done: Boolean(data.jurusan_1), value: data.jurusan_nama || "Belum dipilih" },
     { label: "Dokumen", done: Number(data.dokumen_count) === 5, value: `${Number(data.dokumen_count || 0)}/5 diunggah` },
     { label: "Tes TPA", done: Number(data.tes_count) > 0, value: Number(data.tes_count) > 0 ? "Selesai" : "Belum dikerjakan" },
-    { label: "Pembayaran", done: ["menunggu", "lunas"].includes(data.payment_status), value: data.payment_status || "Belum dibayar" },
+    { label: "Pembayaran", done: ["menunggu", "menunggu_verifikasi", "lunas", "diterima"].includes(data.payment_status), value: data.payment_status || "Belum dibayar" },
     { label: "Status Seleksi", done: ["diajukan", "diterima", "ditolak"].includes(data.status), value: data.status || "draft" },
   ];
   const progress = Math.round((steps.filter((step) => step.done).length / steps.length) * 100);
@@ -38,7 +39,7 @@ export default async function DashboardSiswaPage() {
   return <>
     <h1 className="page-title">Dashboard Siswa</h1><p className="page-sub">Selamat datang, {user.nama}.</p>
     <div className="stat-grid">
-      <DashboardStat label="Jurusan Pilihan" value={data.jurusan_1 || "Belum dipilih"} icon={0} />
+      <DashboardStat label="Jurusan Pilihan" value={data.jurusan_nama || "Belum dipilih"} icon={0} />
       <DashboardStat label="Dokumen Diunggah" value={Number(data.dokumen_count || 0)} icon={2} />
       <DashboardStat label="Status Seleksi" value={data.status || "draft"} icon={3} />
     </div>

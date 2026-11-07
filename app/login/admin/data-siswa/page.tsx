@@ -6,8 +6,10 @@ export default async function DataCalonSiswaPage({ searchParams }: PageProps<"/l
   const search = String(params.q || "").trim().slice(0, 100);
   const status = ["draft", "diajukan", "diterima", "ditolak"].includes(String(params.status)) ? String(params.status) : "";
   const [students] = await pool.execute(
-    `SELECT u.id, u.nama, u.email, b.nisn, p.jurusan_1, p.jurusan_2, COALESCE(p.status, 'draft') AS status
+    `SELECT u.id, u.nama, u.email, b.nisn, COALESCE(j.nama, p.jurusan_1) AS jurusan,
+            COALESCE(p.status, 'draft') AS status
      FROM users u LEFT JOIN biodata b ON b.user_id = u.id LEFT JOIN pendaftaran p ON p.user_id = u.id
+     LEFT JOIN jurusan j ON j.kode = p.jurusan_1
      WHERE u.role = 'calon_siswa' AND (? = '' OR u.nama LIKE ? OR u.email LIKE ?)
        AND (? = '' OR COALESCE(p.status, 'draft') = ?)
      ORDER BY u.created_at DESC, u.id DESC`,
@@ -19,6 +21,6 @@ export default async function DataCalonSiswaPage({ searchParams }: PageProps<"/l
       <button className="btn-blue">Cari</button></form>
       <table className="table"><thead><tr><th>Nama</th><th>Email</th><th>NISN</th><th>Jurusan</th><th>Status</th><th>Detail</th></tr></thead>
         <tbody>{students.length ? students.map((student) => <tr key={student.id}><td>{student.nama}</td><td>{student.email}</td><td>{student.nisn || "-"}</td>
-          <td>{student.jurusan_1 || "-"} / {student.jurusan_2 || "-"}</td><td>{student.status}</td><td><Link href={`/login/admin/data-siswa/${student.id}`}>Lihat</Link></td></tr>) :
+          <td>{student.jurusan || "-"}</td><td>{student.status}</td><td><Link href={`/login/admin/data-siswa/${student.id}`}>Lihat</Link></td></tr>) :
           <tr><td colSpan={6}>Tidak ada calon siswa yang sesuai.</td></tr>}</tbody></table></div></>;
 }

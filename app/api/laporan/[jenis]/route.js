@@ -4,26 +4,31 @@ import { apiSession, failure } from "@/lib/api-auth";
 const reports = {
   seleksi: {
     roles: ["admin", "kepsek"],
-    sql: `SELECT u.nama, u.email, p.jurusan_1, p.jurusan_2, p.status, p.catatan, t.nilai
+    sql: `SELECT u.nama, u.email, COALESCE(j.nama, p.jurusan_1) AS jurusan, p.status, p.catatan, t.nilai
           FROM pendaftaran p JOIN users u ON u.id = p.user_id
+          LEFT JOIN jurusan j ON j.kode = p.jurusan_1
           LEFT JOIN tes_tpa t ON t.user_id = u.id ORDER BY u.nama`,
   },
   pembayaran: {
     roles: ["admin", "kepsek"],
-    sql: `SELECT u.nama, u.email, pay.jumlah, pay.status, pay.catatan, pay.created_at
+    sql: `SELECT u.nama, u.email, pay.tahap, COALESCE(pay.nominal, pay.jumlah) AS nominal,
+                 pay.status, pay.catatan, pay.created_at
           FROM pembayaran pay JOIN users u ON u.id = pay.user_id ORDER BY pay.created_at DESC`,
   },
   siswa: {
     roles: ["kepsek"],
-    sql: `SELECT u.nama, u.email, b.nisn, p.jurusan_1, p.jurusan_2, p.status
+    sql: `SELECT u.nama, u.email, b.nisn, COALESCE(j.nama, p.jurusan_1) AS jurusan, p.status
           FROM users u LEFT JOIN biodata b ON b.user_id = u.id
           LEFT JOIN pendaftaran p ON p.user_id = u.id
+          LEFT JOIN jurusan j ON j.kode = p.jurusan_1
           WHERE u.role = 'calon_siswa' ORDER BY u.nama`,
   },
   pendaftar: {
     roles: ["admin"],
-    sql: `SELECT u.nama, u.email, u.created_at, COALESCE(p.status, 'draft') AS status, p.jurusan_1, p.jurusan_2
+    sql: `SELECT u.nama, u.email, u.created_at, COALESCE(p.status, 'draft') AS status,
+                 COALESCE(j.nama, p.jurusan_1) AS jurusan
           FROM users u LEFT JOIN pendaftaran p ON p.user_id = u.id
+          LEFT JOIN jurusan j ON j.kode = p.jurusan_1
           WHERE u.role = 'calon_siswa' ORDER BY u.created_at DESC`,
   },
 };

@@ -17,11 +17,11 @@ export default function CountUp({
 
   useEffect(() => {
     const target = Number.isFinite(value) ? value : 0;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setCount(target);
-      return;
-    }
     let frame = 0;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      frame = requestAnimationFrame(() => setCount(target));
+      return () => cancelAnimationFrame(frame);
+    }
     const start = performance.now();
     const update = (now: number) => {
       const progress = Math.min((now - start) / duration, 1);

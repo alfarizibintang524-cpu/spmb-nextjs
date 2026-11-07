@@ -30,7 +30,19 @@ function ActionConfirmation({
   );
 }
 
-export function ReviewAction({ id, type, currentStatus }: { id: number; type: "dokumen" | "pembayaran"; currentStatus: string }) {
+export function ReviewAction({
+  id,
+  type,
+  currentStatus,
+  tahap,
+  nominal,
+}: {
+  id: number;
+  type: "dokumen" | "pembayaran";
+  currentStatus: string;
+  tahap?: "pendaftaran" | "daftar_ulang" | null;
+  nominal?: number | null;
+}) {
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,7 +53,7 @@ export function ReviewAction({ id, type, currentStatus }: { id: number; type: "d
       const response = await fetch("/api/admin/verifikasi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, type, status, catatan: note }),
+        body: JSON.stringify({ id, type, status, catatan: note, tahap, nominal }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Gagal menyimpan.");
@@ -67,7 +79,7 @@ export function ReviewAction({ id, type, currentStatus }: { id: number; type: "d
     </button>{" "}
     <button className="btn-blue" disabled={busy} onClick={() => requestUpdate("ditolak")}>Tolak</button>
     {message && <small role="status">{message}</small>}
-    {currentStatus !== "menunggu" && <small>{currentStatus}</small>}
+    {currentStatus !== "menunggu" && currentStatus !== "menunggu_verifikasi" && <small>{currentStatus}</small>}
     {pending && <ActionConfirmation action="Tolak" busy={busy} onCancel={() => setPending("")} onConfirm={() => void update(pending)} />}
   </div>;
 }

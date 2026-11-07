@@ -1,5 +1,6 @@
 import "./spmb.css";
 import Link from "next/link";
+import Image from "next/image";
 import Reveal from "./ui/Reveal";
 import CountUp from "./ui/CountUp";
 import NavbarScroll from "./ui/NavbarScroll";
@@ -27,7 +28,7 @@ export default function Home() {
         <div className="container navbar-inner">
           <div className="brand">
             <span className="brand-text">SPMB</span>
-            <img src="/asset/logo-sekolah.png" alt="Logo SMK Citra Negara" className="brand-logo" />
+            <Image src="/asset/logo-sekolah.png" alt="Logo SMK Citra Negara" className="brand-logo" width={123} height={107} sizes="48px" />
           </div>
           <nav className="nav-links">
             <a href="#beranda" className="active">Beranda</a>
@@ -58,7 +59,7 @@ export default function Home() {
             </div>
           </div>
           <div className="hero-image">
-            <img src="/asset/gedung-sekolah.jpg" alt="Gedung SMK Citra Negara" />
+            <Image src="/asset/gedung-sekolah.jpg" alt="Gedung SMK Citra Negara" width={470} height={245} sizes="(max-width: 760px) 100vw, 50vw" />
           </div>
         </div>
       </section>

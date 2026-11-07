@@ -2,10 +2,11 @@ import pool from "@/lib/db";
 
 export default async function LaporanSeleksiPage() {
   const [rows] = await pool.execute(
-    `SELECT COALESCE(p.jurusan_1, 'Belum memilih') AS jurusan, COUNT(*) AS peserta,
+    `SELECT COALESCE(j.nama, p.jurusan_1, 'Belum memilih') AS jurusan, COUNT(*) AS peserta,
       SUM(p.status = 'diterima') AS diterima, SUM(p.status = 'ditolak') AS ditolak,
       SUM(p.status = 'diajukan') AS menunggu
-     FROM pendaftaran p GROUP BY p.jurusan_1 ORDER BY p.jurusan_1`
+     FROM pendaftaran p LEFT JOIN jurusan j ON j.kode = p.jurusan_1
+     GROUP BY p.jurusan_1, j.nama ORDER BY j.nama, p.jurusan_1`
   );
   const [[summary]] = await pool.execute(
     `SELECT COUNT(*) AS peserta, SUM(status = 'diterima') AS diterima,

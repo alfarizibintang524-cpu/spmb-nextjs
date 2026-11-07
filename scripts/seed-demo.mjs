@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import pool from "../lib/db.js";
 
-const jurusan = ["PPLG", "TJKT", "PM", "DKV", "PH"];
+const jurusan = ["TKJ", "RPL", "AKL", "MPLB"];
 const jenisDokumen = ["ijazah_skl", "kk", "akta", "pas_foto", "rapor"];
 
 try {
@@ -23,10 +23,10 @@ try {
       [userId, String(1000000000 + index), `0812345678${String(index).padStart(2, "0")}`, `Orang Tua ${index}`]
     );
     await pool.execute(
-      `INSERT INTO pendaftaran (user_id, jurusan_1, jurusan_2, status, catatan)
-       VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO pendaftaran (user_id, jurusan_1, status, catatan)
+       VALUES (?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE jurusan_1 = VALUES(jurusan_1)`,
-      [userId, jurusan[(index - 1) % 5], jurusan[index % 5],
+      [userId, jurusan[(index - 1) % jurusan.length],
         index <= 4 ? "diajukan" : index <= 6 ? "diterima" : "ditolak",
         index > 4 ? "Hasil seleksi demo." : null]
     );
@@ -44,12 +44,25 @@ try {
        VALUES (?, ?, ?, 10) ON DUPLICATE KEY UPDATE nilai = VALUES(nilai)`,
       [userId, 50 + index * 5, 5 + Math.floor(index / 2)]
     );
-    await pool.execute(
-      `INSERT INTO pembayaran (user_id, jumlah, bukti_path, status)
-       VALUES (?, 150000, '/asset/logo-sekolah.png', ?)
-       ON DUPLICATE KEY UPDATE status = VALUES(status)`,
-      [userId, index % 3 === 0 ? "menunggu" : "lunas"]
+    const paymentStatus = index % 3 === 0 ? "menunggu" : "lunas";
+    const [existingPayment] = await pool.execute(
+      `SELECT id FROM pembayaran WHERE user_id = ? AND tahap = 'pendaftaran'
+       ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [userId]
     );
+    if (existingPayment.length) {
+      await pool.execute(
+        `UPDATE pembayaran SET jumlah = 150000, nominal = 150000,
+           bukti_path = '/asset/logo-sekolah.png', status = ? WHERE id = ?`,
+        [paymentStatus, existingPayment[0].id]
+      );
+    } else {
+      await pool.execute(
+        `INSERT INTO pembayaran (user_id, jumlah, nominal, tahap, bukti_path, status)
+         VALUES (?, 150000, 150000, 'pendaftaran', '/asset/logo-sekolah.png', ?)`,
+        [userId, paymentStatus]
+      );
+    }
   }
   console.log("Seed 8 calon siswa demo berhasil. Password: Demo12345");
 } catch (error) {

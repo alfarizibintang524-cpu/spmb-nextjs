@@ -14,5 +14,7 @@ export default async function TesTpaPage() {
   ]);
   const result = results[0] || null;
   return <><h1 className="page-title">Tes TPA</h1><p className="page-sub">Jawab seluruh soal. Tes hanya dapat dikerjakan satu kali.</p>
-    <TpaForm questions={result ? [] : questions} result={result} /></>;
+    {!result && questions.length === 0
+      ? <div className="panel" role="status">Soal tes belum tersedia. Silakan hubungi panitia.</div>
+      : <TpaForm questions={result ? [] : questions} result={result} />}</>;
 }

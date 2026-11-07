@@ -7,19 +7,21 @@ export async function POST() {
   try {
     const [rows] = await pool.execute(
       `SELECT b.nisn, b.tempat_lahir, b.tanggal_lahir, b.nomor_hp, b.alamat, b.asal_sekolah, b.nama_ortu,
-              p.jurusan_1, p.jurusan_2,
+              p.jurusan_1,
               p.status,
               (SELECT COUNT(*) FROM dokumen d WHERE d.user_id = p.user_id) AS dokumen_count,
               (SELECT COUNT(*) FROM tes_tpa t WHERE t.user_id = p.user_id) AS tes_selesai,
-              (SELECT COUNT(*) FROM pembayaran pay WHERE pay.user_id = p.user_id AND pay.status IN ('menunggu','lunas')) AS pembayaran_dikirim
+              (SELECT pay.status FROM pembayaran pay
+               WHERE pay.user_id = p.user_id AND pay.tahap = 'pendaftaran'
+               ORDER BY pay.created_at DESC, pay.id DESC LIMIT 1) AS pembayaran_status
        FROM users u LEFT JOIN biodata b ON b.user_id = u.id LEFT JOIN pendaftaran p ON p.user_id = u.id
        WHERE u.id = ?`,
       [auth.session.id]
     );
     const data = rows[0];
     if (!data?.nisn || !data.tempat_lahir || !data.tanggal_lahir || !data.nomor_hp || !data.alamat ||
-        !data.jurusan_1 || !data.jurusan_2 || Number(data.dokumen_count) < 5 ||
-        !Number(data.tes_selesai) || !Number(data.pembayaran_dikirim)) {
+        !data.jurusan_1 || Number(data.dokumen_count) < 5 ||
+        !Number(data.tes_selesai) || !["menunggu", "menunggu_verifikasi", "lunas", "diterima"].includes(data.pembayaran_status)) {
       return Response.json({ message: "Lengkapi biodata, jurusan, 5 dokumen, tes TPA, dan pembayaran sebelum mengajukan." }, { status: 400 });
     }
     if (data.status === "diterima" || data.status === "diajukan") {

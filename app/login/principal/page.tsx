@@ -11,14 +11,15 @@ export default async function DashboardKepalaSekolahPage() {
       `SELECT (SELECT COUNT(*) FROM users WHERE role = 'calon_siswa') AS siswa,
         (SELECT COUNT(*) FROM tes_tpa) AS tes,
         (SELECT COUNT(*) FROM pendaftaran WHERE status = 'diterima') AS diterima,
-        (SELECT COUNT(*) FROM pembayaran WHERE status = 'lunas') AS lunas,
-        (SELECT COALESCE(SUM(jumlah), 0) FROM pembayaran WHERE status = 'lunas') AS pemasukan`
+        (SELECT COUNT(*) FROM pembayaran WHERE status IN ('lunas', 'diterima')) AS lunas,
+        (SELECT COALESCE(SUM(COALESCE(nominal, jumlah)), 0) FROM pembayaran WHERE status IN ('lunas', 'diterima')) AS pemasukan`
     ),
     pool.execute("SELECT nama, email FROM users WHERE role = 'calon_siswa' ORDER BY created_at DESC, id DESC LIMIT 5"),
     pool.execute(
-      `SELECT COALESCE(p.jurusan_1, 'Belum dipilih') AS label, COUNT(*) AS value
+      `SELECT COALESCE(j.nama, p.jurusan_1, 'Belum dipilih') AS label, COUNT(*) AS value
        FROM users u LEFT JOIN pendaftaran p ON p.user_id = u.id
-       WHERE u.role = 'calon_siswa' GROUP BY p.jurusan_1 ORDER BY value DESC LIMIT 5`
+       LEFT JOIN jurusan j ON j.kode = p.jurusan_1
+       WHERE u.role = 'calon_siswa' GROUP BY p.jurusan_1, j.nama ORDER BY value DESC LIMIT 5`
     ),
     pool.execute("SELECT status AS label, COUNT(*) AS value FROM pendaftaran GROUP BY status ORDER BY status"),
   ]);
